@@ -5,9 +5,9 @@ title: 设计模式
 
 ---
 
-## 设计模式
+# 设计模式
 
-1.reactor
+## 1.reactor
 
 twisted框架有使用该模式
 
@@ -17,7 +17,7 @@ twisted框架有使用该模式
 
 ![](https://github.com/garydai/garydai.github.com/raw/master/_posts/pic/reactor2.png)
 
-2.工厂模式
+## 2.工厂模式
 
 工厂方法模式
 
@@ -31,7 +31,7 @@ twisted框架有使用该模式
 
 把产品抽象
 
-3.抽象工厂模式
+## 3.抽象工厂模式
 
 提供一个接口，用于创建相关或依赖对象的家族，而不需要明确指定具体类。
 
@@ -79,10 +79,9 @@ twisted框架有使用该模式
 	  }
 	}
 
+## 4.单例模式
 
-4.单例模式
-
-5.建造者模式
+## 5.建造者模式
 
 工厂模式创建一个产品，建造者模式创建多个产品合为一起
 
@@ -114,12 +113,45 @@ twisted框架有使用该模式
 			}	     
 		}
 
-
-6.原型模式
+## 6.原型模式
 
 对象拷贝
 
-7.适配器模式
+```java
+   //实现Cloneable 接口的原型抽象类Prototype 
+   class Prototype implements Cloneable {
+        //重写clone方法
+        public Prototype clone(){
+            Prototype prototype = null;
+            try{
+                prototype = (Prototype)super.clone();
+            }catch(CloneNotSupportedException e){
+                e.printStackTrace();
+            }
+            return prototype;
+        }
+    }
+    //实现原型类
+    class ConcretePrototype extends Prototype{
+        public void show(){
+            System.out.println("原型模式实现类");
+        }
+    }
+
+    public class Client {
+        public static void main(String[] args){
+            ConcretePrototype cp = new ConcretePrototype();
+            for(int i=0; i< 10; i++){
+                ConcretePrototype clonecp = (ConcretePrototype)cp.clone();
+                clonecp.show();
+            }
+        }
+    }
+```
+
+
+
+## 7.适配器模式
 
 将一个类通过适配器变成满足另一个接口的类
 
@@ -142,8 +174,7 @@ org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerAdapt
 
 org.springframework.web.servlet.handler.SimpleServletHandlerAdapter
 
-
-8.代理模式
+## 8.代理模式
 
 ![](https://github.com/garydai/garydai.github.com/raw/master/_posts/pic/proxy.png)
 
@@ -239,123 +270,188 @@ org.springframework.web.servlet.handler.SimpleServletHandlerAdapter
             }
         }
 
+​        
 
-​        
-​        InvocationHandler test = new Test(new HelloImpl());
-​        
+   	 InvocationHandler test = new Test(new HelloImpl());
         Hello dynamicProxy = (Hello) Proxy.newProxyInstance(实现类.class.getClassLoader(),
                         实现类.class.getInterfaces(), InvocationHandler实例);
         
+
         dynamicProxy.say();
 
-
-9.外观模式
+## 9.外观模式
 
 组合各种类
 
-10.桥接模式
+## 10.桥接模式
 
 使得不同的对象使用自身的方法
 
-11.组合模式
+## 11.组合模式
 
-12.享元模式
+## 12.享元模式
 
-13.策略模式
-	
-	 interface IStrategy {
-	        public void doSomething();
-	    }
-	    class ConcreteStrategy1 implements IStrategy {
-	        public void doSomething() {
-	            System.out.println("具体策略1");
-	        }
-	    }
-	    class ConcreteStrategy2 implements IStrategy {
-	        public void doSomething() {
-	            System.out.println("具体策略2");
-	        }
-	    }
-	    class Context {
-	        private IStrategy strategy;
-	
-	        public Context(IStrategy strategy){
-	            this.strategy = strategy;
-	        }
-	
-	        public void execute(){
-	            strategy.doSomething();
-	        }
-	    }
-	
-	    public class Client {
-	        public static void main(String[] args){
-	            Context context;
-	            System.out.println("-----执行策略1-----");
-	            context = new Context(new ConcreteStrategy1());
-	            context.execute();
-	
-	            System.out.println("-----执行策略2-----");
-	            context = new Context(new ConcreteStrategy2());
-	            context.execute();
-	        }
-	    }
+```java
+
+//抽象享元类
+interface Flyweight {
+    //对外状态对象
+    void operation(String name);
+    //对内对象
+    String getType();
+}
 
 
-14.模板方法模式
+//具体享元类
+class ConcreteFlyweight implements Flyweight {
+    private String type;
+
+    public ConcreteFlyweight(String type) {
+        this.type = type;
+    }
+
+    @Override
+    public void operation(String name) {
+        System.out.printf("[类型(内在状态)] - [%s] - [名字(外在状态)] - [%s]\n", type, name);
+    }
+
+    @Override
+    public String getType() {
+        return type;
+    }
+}
+
+
+//享元工厂类
+class FlyweightFactory {
+    private static final Map<String, Flyweight> FLYWEIGHT_MAP = new HashMap<>();//享元池，用来存储享元对象
+
+    public static Flyweight getFlyweight(String type) {
+        if (FLYWEIGHT_MAP.containsKey(type)) {//如果在享元池中存在对象，则直接获取
+            return FLYWEIGHT_MAP.get(type);
+        } else {//在响应池不存在，则新创建对象，并放入到享元池
+            ConcreteFlyweight flyweight = new ConcreteFlyweight(type);
+            FLYWEIGHT_MAP.put(type, flyweight);
+            return flyweight;
+        }
+    }
+}
+
+
+public class Client {
+
+    public static void main(String[] args) {
+        Flyweight fw0 = FlyweightFactory.getFlyweight("a");
+        Flyweight fw1 = FlyweightFactory.getFlyweight("b");
+        Flyweight fw2 = FlyweightFactory.getFlyweight("a");
+        Flyweight fw3 = FlyweightFactory.getFlyweight("b");
+        fw1.operation("abc");
+        System.out.printf("[结果(对象对比)] - [%s]\n", fw0 == fw2);
+        System.out.printf("[结果(内在状态)] - [%s]\n", fw1.getType());
+    }
+}
+```
+
+相同key缓存数据
+
+## 13.策略模式
+
+```java
+ interface IStrategy {
+        public void doSomething();
+    }
+    class ConcreteStrategy1 implements IStrategy {
+        public void doSomething() {
+            System.out.println("具体策略1");
+        }
+    }
+    class ConcreteStrategy2 implements IStrategy {
+        public void doSomething() {
+            System.out.println("具体策略2");
+        }
+    }
+    class Context {
+        private IStrategy strategy;
+
+        public Context(IStrategy strategy){
+            this.strategy = strategy;
+        }
+
+        public void execute(){
+            strategy.doSomething();
+        }
+    }
+
+    public class Client {
+        public static void main(String[] args){
+            Context context;
+            System.out.println("-----执行策略1-----");
+            context = new Context(new ConcreteStrategy1());
+            context.execute();
+
+            System.out.println("-----执行策略2-----");
+            context = new Context(new ConcreteStrategy2());
+            context.execute();
+        }
+    }
+```
+
+## 14.模板方法模式
 
 父类定义逻辑顺序，子类实现具体逻辑
 
-15.观察者模式
+## 15.观察者模式
 
 把观察者放入对象内
 
 多个观察者对象监听某对象，当该对象状态发生变化，则会通知所有观察者。
 
-		public abstract class Subject {
-		    /**
-		     * 用来保存注册的观察者对象
-		     */
-		    private    List<Observer> list = new ArrayList<Observer>();
-		    /**
-		     * 注册观察者对象
-		     * @param observer    观察者对象
-		     */
-		    public void attach(Observer observer){
-		        
-		        list.add(observer);
-		        System.out.println("Attached an observer");
-		    }
-		    /**
-		     * 删除观察者对象
-		     * @param observer    观察者对象
-		     */
-		    public void detach(Observer observer){
-		        
-		        list.remove(observer);
-		    }
-		    /**
-		     * 通知所有注册的观察者对象
-		     */
-		    public void nodifyObservers(String newState){
-		        
-		        for(Observer observer : list){
-		            observer.update(newState);
-		        }
-		    }
-		}
+```c++
+	public abstract class Subject {
+	    /**
+	     * 用来保存注册的观察者对象
+	     */
+	    private    List<Observer> list = new ArrayList<Observer>();
+	    /**
+	     * 注册观察者对象
+	     * @param observer    观察者对象
+	     */
+	    public void attach(Observer observer){
+	        
+	        list.add(observer);
+	        System.out.println("Attached an observer");
+	    }
+	    /**
+	     * 删除观察者对象
+	     * @param observer    观察者对象
+	     */
+	    public void detach(Observer observer){
+	        
+	        list.remove(observer);
+	    }
+	    /**
+	     * 通知所有注册的观察者对象
+	     */
+	    public void nodifyObservers(String newState){
+	        
+	        for(Observer observer : list){
+	            observer.update(newState);
+	        }
+	    }
+	}
+```
 
 
 ​		
 ​		
 ​		public class ConcreteSubject extends Subject{
 ​		    
-		    private String state;
-		    
-		    public String getState() {
-		        return state;
-		    }
-		
+​		    private String state;
+​		    
+​		    public String getState() {
+​		        return state;
+​		    }
+​		
 		    public void change(String newState){
 		        state = newState;
 		        System.out.println("主题状态为：" + state);
@@ -394,15 +490,15 @@ org.springframework.web.servlet.handler.SimpleServletHandlerAdapter
 
 ![](https://github.com/garydai/garydai.github.com/raw/master/_posts/pic/observer.png)
 
-16.迭代子模式
+## 16.迭代子模式
 
 迭代器iterator
 
-17.责任链模式
+## 17.责任链模式
 
 每个对象持有对下一个对象的引用
 
-18.命令模式
+## 18.命令模式
 
 把方法调用封装起来
 
@@ -414,7 +510,7 @@ org.springframework.web.servlet.handler.SimpleServletHandlerAdapter
 
 例子：工作队列
 
-```
+```java
 public interface Command {
 	void execute();
 }
@@ -445,14 +541,13 @@ public class client {
 	}
 }
 ```
-19.备忘录模式
+## 19.备忘录模式
 
-20.状态模式
+## 20.状态模式
 
 	public interface State {
-   		public void doAction(Context context);
-	}
-	
+		public void doAction(Context context);
+	}	
 	public class StartState implements State {
 	
 	   public void doAction(Context context) {
@@ -477,116 +572,120 @@ public class client {
 	   }
 	}
 
-
-​	
-​	public class Context {
-​	   private State state;
-​	
-	   public Context(){
-	      state = null;
-	   }
+```java
+public class Context {
+	private State state;
 	
-	   public void setState(State state){
-	      this.state = state;        
-	   }
-	
-	   public State getState(){
-	      return state;
-	   }
+	public Context(){
+		state = null;
 	}
-
-
-	public class StatePatternDemo {
-	   public static void main(String[] args) {
-	      Context context = new Context();
 	
-	      StartState startState = new StartState();
-	      startState.doAction(context);
-	
-	      System.out.println(context.getState().toString());
-	
-	      StopState stopState = new StopState();
-	      stopState.doAction(context);
-	
-	      System.out.println(context.getState().toString());
-	   }
+	public void setState(State state){
+		this.state = state;        
 	}
+  
+  public State getState(){
+  	return state;
+  }
+}
+```
 
 
+```java
+public class StatePatternDemo {
+   public static void main(String[] args) {
+      Context context = new Context();
 
-21.访问者模式
+      StartState startState = new StartState();
+      startState.doAction(context);
+
+      System.out.println(context.getState().toString());
+
+      StopState stopState = new StopState();
+      stopState.doAction(context);
+
+      System.out.println(context.getState().toString());
+   }
+}
+```
+
+netty pipeline
+
+## 21.访问者模式
 
 数据和操作解耦
 
-	abstract class Element {  
-	    public abstract void accept(IVisitor visitor);  
-	    public abstract void doSomething();  
-	}  
-	  
-	interface IVisitor {  
-	    public void visit(ConcreteElement1 el1);  
-	    public void visit(ConcreteElement2 el2);  
-	}  
-	  
-	class ConcreteElement1 extends Element {  
-	    public void doSomething(){  
-	        System.out.println("这是元素1");  
-	    }  
-	      
-	    public void accept(IVisitor visitor) {  
-	        visitor.visit(this);  
-	    }  
-	}  
-	  
-	class ConcreteElement2 extends Element {  
-	    public void doSomething(){  
-	        System.out.println("这是元素2");  
-	    }  
-	      
-	    public void accept(IVisitor visitor) {  
-	        visitor.visit(this);  
-	    }  
-	}  
-	class Visitor implements IVisitor {  
-	  
-	    public void visit(ConcreteElement1 el1) {  
-	        el1.doSomething();  
-	    }  
-	      
-	    public void visit(ConcreteElement2 el2) {  
-	        el2.doSomething();  
-	    }  
-	}  
-	  
-	class ObjectStruture {  
-	    public static List<Element> getList(){  
-	        List<Element> list = new ArrayList<Element>();  
-	        Random ran = new Random();  
-	        for(int i=0; i<10; i++){  
-	            int a = ran.nextInt(100);  
-	            if(a>50){  
-	                list.add(new ConcreteElement1());  
-	            }else{  
-	                list.add(new ConcreteElement2());  
-	            }  
-	        }  
-	        return list;  
-	    }  
-	}  
-	  
-	public class Client {  
-	    public static void main(String[] args){  
-	        List<Element> list = ObjectStruture.getList();  
-	        for(Element e: list){  
-	            e.accept(new Visitor());  
-	        }  
-	    }  
-	}  
+```java
+abstract class Element {  
+    public abstract void accept(IVisitor visitor);  
+    public abstract void doSomething();  
+}  
+  
+interface IVisitor {  
+    public void visit(ConcreteElement1 el1);  
+    public void visit(ConcreteElement2 el2);  
+}  
+  
+class ConcreteElement1 extends Element {  
+    public void doSomething(){  
+        System.out.println("这是元素1");  
+    }  
+      
+    public void accept(IVisitor visitor) {  
+        visitor.visit(this);  
+    }  
+}  
+  
+class ConcreteElement2 extends Element {  
+    public void doSomething(){  
+        System.out.println("这是元素2");  
+    }  
+      
+    public void accept(IVisitor visitor) {  
+        visitor.visit(this);  
+    }  
+}  
+class Visitor implements IVisitor {  
+  
+    public void visit(ConcreteElement1 el1) {  
+        el1.doSomething();  
+    }  
+      
+    public void visit(ConcreteElement2 el2) {  
+        el2.doSomething();  
+    }  
+}  
+  
+class ObjectStruture {  
+    public static List<Element> getList(){  
+        List<Element> list = new ArrayList<Element>();  
+        Random ran = new Random();  
+        for(int i=0; i<10; i++){  
+            int a = ran.nextInt(100);  
+            if(a>50){  
+                list.add(new ConcreteElement1());  
+            }else{  
+                list.add(new ConcreteElement2());  
+            }  
+        }  
+        return list;  
+    }  
+}  
+  
+public class Client {  
+    public static void main(String[] args){  
+        List<Element> list = ObjectStruture.getList();  
+        for(Element e: list){  
+            e.accept(new Visitor());  
+        }  
+    }  
+}  
+```
 
-22.中介者模式
+## 22.中介者模式
 
-23.解释器模式
-	
+## 23.解释器模式
+
 	abstract class AbstractExpression {
 	       public  abstract void interpret(Context ctx);
 	}
@@ -597,96 +696,94 @@ public class client {
 	   }
 	}
 
-
-24.装饰器模式
+## 24.装饰器模式
 
 ![](https://github.com/garydai/garydai.github.com/raw/master/_posts/pic/decorator.png)
 咖啡是一种饮料，咖啡的本质是咖啡豆+水磨出来的。咖啡店现在要卖各种口味的咖啡，如果不使用装饰模式，那么在销售系统中，各种不一样的咖啡都要产生一个类，如果有4中咖啡豆，5种口味，那么将要产生至少20个类（不包括混合口味），非常麻烦。使用了装饰模式，只需要11个类即可生产任意口味咖啡（包括混合口味
 
 
-		public abstract class AbstractCellPhone
-		{
-		        public abstract string CallNumber();
-		        public abstract string SendMessage();
-		}
-		
-		public class NokiaPhone : AbstractCellPhone
-	   {
-	        public override string CallNumber()
-	        {
-	            return "NokiaPhone call sombody";
-	        }
-	 
-	        public override string SendMessage()
-	        {
-	            return "NokiaPhone send a message to somebody";
-	        }
-	   }
+```c++
+	public abstract class AbstractCellPhone
+	{
+	        public abstract string CallNumber();
+	        public abstract string SendMessage();
+	}
+	
+	public class NokiaPhone : AbstractCellPhone
+   {
+        public override string CallNumber()
+        {
+            return "NokiaPhone call sombody";
+        }
+ 
+        public override string SendMessage()
+        {
+            return "NokiaPhone send a message to somebody";
+        }
+   }
+```
 
+```c++
+   public abstract class Decorator : AbstractCellPhone
+    {
+        AbstractCellPhone _phone;
+ 
+        public Decorator(AbstractCellPhone phone)
+        {
+            _phone = phone;
+        }
+ 
+        public override string CallNumber()
+        {
+            return _phone.CallNumber();
+        }
+ 
+        public override string SendMessage()
+        {
+            return _phone.SendMessage();
+        }
+  }	 		 
+```
+
+```c++
+ public class DecoratorGPS : Decorator
+ {
+   public DecoratorGPS(AbstractCellPhone phone) : base(phone){ }
    
+   public override string CallNumber()
+        {
+            return base.CallNumber() + " with GPS";
+        }
+ 
+        public override string SendMessage()
+        {
+            return base.SendMessage() + " with GPS";
+        }
+    }
+ 
+    public class DecoratorBlueTooth : Decorator
+    {
+        public DecoratorBlueTooth(AbstractCellPhone phone)
+            : base(phone)
+        { }
+ 
+        public override string CallNumber()
+        {
+            return base.CallNumber() + " with BlueTooth";
+        }
+ 
+        public override string SendMessage()
+        {
+            return base.SendMessage() + " with BlueTooth";
+        }
+ }
+```
 
 
-	   public abstract class Decorator : AbstractCellPhone
-	    {
-	        AbstractCellPhone _phone;
-	 
-	        public Decorator(AbstractCellPhone phone)
-	        {
-	            _phone = phone;
-	        }
-	 
-	        public override string CallNumber()
-	        {
-	            return _phone.CallNumber();
-	        }
-	 
-	        public override string SendMessage()
-	        {
-	            return _phone.SendMessage();
-	        }
-	  }
+给手机加上gps等装饰
 
 
-​	 		 
-
-	 public class DecoratorGPS : Decorator
-	 {
-	   public DecoratorGPS(AbstractCellPhone phone) : base(phone){ }
-	   
-	   public override string CallNumber()
-	        {
-	            return base.CallNumber() + " with GPS";
-	        }
-	 
-	        public override string SendMessage()
-	        {
-	            return base.SendMessage() + " with GPS";
-	        }
-	    }
-	 
-	    public class DecoratorBlueTooth : Decorator
-	    {
-	        public DecoratorBlueTooth(AbstractCellPhone phone)
-	            : base(phone)
-	        { }
-	 
-	        public override string CallNumber()
-	        {
-	            return base.CallNumber() + " with BlueTooth";
-	        }
-	 
-	        public override string SendMessage()
-	        {
-	            return base.SendMessage() + " with BlueTooth";
-	        }
-	 }
-
-
-​	  
-​	  给手机加上gps等装饰
-
-
-  	
+Java io  	
 
 ### 分类
 创建型
