@@ -1,7 +1,6 @@
 ---
 date: 2019-11-4
 layout: default
-
 title: thread_local
 
 ---
@@ -18,7 +17,7 @@ Thread.ThreadLocalMap;
 
 我们调用ThreadLocal.get方法时，实际上是从当前线程中获取ThreadLocalMap<ThreadLocal, Object>，然后根据当前ThreadLocal获取当前线程共享变量Object。
 
-#### ThreadLocal
+## ThreadLocal
 
 ```java
  		public T get() {
@@ -55,7 +54,7 @@ Thread.ThreadLocalMap;
     }
 ```
 
-#### ThreadLocalMap
+## ThreadLocalMap
 
 弱引用，gc的时候会释放内存
 
@@ -71,3 +70,17 @@ Thread.ThreadLocalMap;
         }
 ```
 
+```java
+private Entry getEntry(ThreadLocal<?> key) {
+    int i = key.threadLocalHashCode & (table.length - 1);
+    Entry e = table[i];
+    if (e != null && e.get() == key)
+        return e;
+    else
+        return getEntryAfterMiss(key, i, e);
+}
+```
+
+
+
+![image-20200204114003273](/Users/daitechang/Documents/hexo_blog/source/_posts/pic/image-20200204114003273.png)
