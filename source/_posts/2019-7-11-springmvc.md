@@ -549,7 +549,7 @@ implements HttpRequestHandler
 
 
 
-Spring MVC提供了许多HandlerMapping的实现，默认使用的是BeanNameUrlHandlerMapping，可以根据Bean的name属性映射到URL中
+**Spring MVC提供了许多HandlerMapping的实现，默认使用的是BeanNameUrlHandlerMapping，可以根据Bean的name属性映射到URL中**
 
 HandlerMapping继承的ApplicationObjectSupport实现了ApplicationContextAware，spring的bean后置处理器，会调用他的setApplicationContext
 
@@ -633,8 +633,26 @@ public abstract class AbstractDetectingUrlHandlerMapping extends AbstractUrlHand
 
 #### BeanNameUrlHandlerMapping
 
-```java
+**用于非注解的映射器**
 
+```xml
+<!--配置处理器映射器
+    springmvc框架根据HandlerMapping接口判断是否是处理器映射器-->
+    <!--根据bean的name进行查找Handler,将action的url配置在bean的name中-->
+    <bean
+       	class="org.springframework.web.servlet.handler.BeanNameUrlHandlerMapping"/>
+```
+
+找到bean的name开头是"/"的bean
+
+```xml
+<!--配置Handler
+    由于使用了BeanNameUrlHandlerMapping处理映射器，所以name要配置为url-->
+    <bean name="/itemList.action" class="controller.ItemController1"></bean>
+    
+```
+
+```java
 public class BeanNameUrlHandlerMapping extends AbstractDetectingUrlHandlerMapping {
 
 	@Override
@@ -655,7 +673,134 @@ public class BeanNameUrlHandlerMapping extends AbstractDetectingUrlHandlerMappin
 }
 ```
 
-#### BeanNameUrlHandlerMapping
+org.springframework.web.servlet.handler.AbstractDetectingUrlHandlerMapping#initApplicationContext
+
+```java
+public void initApplicationContext() throws ApplicationContextException {
+   super.initApplicationContext();
+   detectHandlers();
+}
+```
+
+org.springframework.web.servlet.handler.AbstractDetectingUrlHandlerMapping#detectHandlers
+
+```java
+protected void detectHandlers() throws BeansException {
+   ApplicationContext applicationContext = obtainApplicationContext();
+   if (logger.isDebugEnabled()) {
+      logger.debug("Looking for URL mappings in application context: " + applicationContext);
+   }
+   String[] beanNames = (this.detectHandlersInAncestorContexts ?
+         BeanFactoryUtils.beanNamesForTypeIncludingAncestors(applicationContext, Object.class) :
+         applicationContext.getBeanNamesForType(Object.class));
+
+   // Take any bean name that we can determine URLs for.
+   for (String beanName : beanNames) {
+     	// 调用父类，得到url
+      String[] urls = determineUrlsForHandler(beanName);
+      if (!ObjectUtils.isEmpty(urls)) {
+         // URL paths found: Let's consider it a handler.
+         // 将url和controller的映射放入map中
+         registerHandler(urls, beanName);
+      }
+      else {
+         if (logger.isDebugEnabled()) {
+            logger.debug("Rejected bean name '" + beanName + "': no URL paths identified");
+         }
+      }
+   }
+}
+```
+
+```java
+protected void registerHandler(String urlPath, Object handler) throws BeansException, IllegalStateException {
+   Assert.notNull(urlPath, "URL path must not be null");
+   Assert.notNull(handler, "Handler object must not be null");
+   Object resolvedHandler = handler;
+
+   // Eagerly resolve handler if referencing singleton via name.
+   if (!this.lazyInitHandlers && handler instanceof String) {
+      String handlerName = (String) handler;
+      ApplicationContext applicationContext = obtainApplicationContext();
+      if (applicationContext.isSingleton(handlerName)) {
+        // 从bean容器中拿到handler
+         resolvedHandler = applicationContext.getBean(handlerName);
+      }
+   }
+
+   Object mappedHandler = this.handlerMap.get(urlPath);
+   if (mappedHandler != null) {
+      if (mappedHandler != resolvedHandler) {
+         throw new IllegalStateException(
+               "Cannot map " + getHandlerDescription(handler) + " to URL path [" + urlPath +
+               "]: There is already " + getHandlerDescription(mappedHandler) + " mapped.");
+      }
+   }
+   else {
+      if (urlPath.equals("/")) {
+         if (logger.isInfoEnabled()) {
+            logger.info("Root mapping to " + getHandlerDescription(handler));
+         }
+         setRootHandler(resolvedHandler);
+      }
+      else if (urlPath.equals("/*")) {
+         if (logger.isInfoEnabled()) {
+            logger.info("Default mapping to " + getHandlerDescription(handler));
+         }
+         setDefaultHandler(resolvedHandler);
+      }
+      else {
+         this.handlerMap.put(urlPath, resolvedHandler);
+         if (logger.isInfoEnabled()) {
+            logger.info("Mapped URL path [" + urlPath + "] onto " + getHandlerDescription(handler));
+         }
+      }
+   }
+}
+```
+
+handler要实现Controller
+
+```java
+public class ItemController1 implements Controller
+{
+    @Override
+    public ModelAndView handleRequest(HttpServletRequest httpServletRequest,
+                                      HttpServletResponse httpServletResponse) throws Exception {
+        //使用静态的数据将商品信息显示在jsp页面
+        List<Items> itemsList = new ArrayList<>();
+
+        Items items_1 = new Items();
+        items_1.setName("联想笔记本");
+        items_1.setPrice(6000f);
+        items_1.setCreatetime(new Date());
+        items_1.setDetail("ThinkPad T430 联想笔记本电脑！");
+
+        Items items_2 = new Items();
+        items_2.setName("苹果手机");
+        items_2.setPrice(5000f);
+        items_2.setDetail("iphone6苹果手机！");
+
+        itemsList.add(items_1);
+        itemsList.add(items_2);
+
+        ModelAndView modelAndView=new ModelAndView();
+        modelAndView.addObject("itemsList",itemsList);
+        modelAndView.setViewName("/WEB-INF/jsp/itemsList.jsp");//指定用户访问的jsp页面地址
+        return modelAndView;
+    }
+}
+```
+
+
+
+
+
+#### RequestMappingHandlerMapping
+
+**用于注解的映射器**
+
+根据@Controller和@RequestMapping来映射
 
 ```java
 public class RequestMappingHandlerMapping extends RequestMappingInfoHandlerMapping
@@ -669,22 +814,20 @@ public class RequestMappingHandlerMapping extends RequestMappingInfoHandlerMappi
       this.config.setTrailingSlashMatch(this.useTrailingSlashMatch);
       this.config.setRegisteredSuffixPatternMatch(this.useRegisteredSuffixPatternMatch);
       this.config.setContentNegotiationManager(getContentNegotiationManager());
-
+			// 加载handlermethods
       super.afterPropertiesSet();
     }
 }
 ```
 
+org.springframework.web.servlet.handler.AbstractHandlerMethodMapping#afterPropertiesSet
 
+org.springframework.web.servlet.handler.AbstractHandlerMethodMapping#initHandlerMethods
+
+将uri mapping到方法HandlerMethod
 
 ```java
-public abstract class AbstractHandlerMethodMapping<T> extends AbstractHandlerMapping implements InitializingBean {
-  
-	org.springframework.web.servlet.handler.AbstractHandlerMethodMapping#afterPropertiesSet->org.springframework.web.servlet.handler.AbstractHandlerMethodMapping#initHandlerMethods
-
-	将uri mapping到方法
-    
-    protected void initHandlerMethods() {
+  protected void initHandlerMethods() {
 		if (logger.isDebugEnabled()) {
 			logger.debug("Looking for request mappings in application context: " + getApplicationContext());
 		}
@@ -717,10 +860,11 @@ public abstract class AbstractHandlerMethodMapping<T> extends AbstractHandlerMap
 }
 ```
 
-将url和bean method注册到urlLookup
+将url和HandlerMethod注册到urlLookup
 
 ```java
 public void register(T mapping, Object handler, Method method) {
+  		// handler：controller类，method：类方法
 			this.readWriteLock.writeLock().lock();
 			try {
 				HandlerMethod handlerMethod = createHandlerMethod(handler, method);
@@ -733,6 +877,7 @@ public void register(T mapping, Object handler, Method method) {
 
 				List<String> directUrls = getDirectUrls(mapping);
 				for (String url : directUrls) {
+          // url:mapping-info
 					this.urlLookup.add(url, mapping);
 				}
 
@@ -755,7 +900,50 @@ public void register(T mapping, Object handler, Method method) {
 		}
 ```
 
+RequestMappingHandlerAdapter处理请求
 
+org.springframework.web.servlet.mvc.method.AbstractHandlerMethodAdapter#handle
+
+org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerAdapter#handleInternal
+
+```java
+protected ModelAndView handleInternal(HttpServletRequest request,
+      HttpServletResponse response, HandlerMethod handlerMethod) throws Exception {
+
+   ModelAndView mav;
+   checkRequest(request);
+
+   // Execute invokeHandlerMethod in synchronized block if required.
+   if (this.synchronizeOnSession) {
+      HttpSession session = request.getSession(false);
+      if (session != null) {
+         Object mutex = WebUtils.getSessionMutex(session);
+         synchronized (mutex) {
+            mav = invokeHandlerMethod(request, response, handlerMethod);
+         }
+      }
+      else {
+         // No HttpSession available -> no mutex necessary
+         mav = invokeHandlerMethod(request, response, handlerMethod);
+      }
+   }
+   else {
+      // No synchronization on session demanded at all...
+      mav = invokeHandlerMethod(request, response, handlerMethod);
+   }
+
+   if (!response.containsHeader(HEADER_CACHE_CONTROL)) {
+      if (getSessionAttributesHandler(handlerMethod).hasSessionAttributes()) {
+         applyCacheSeconds(response, this.cacheSecondsForSessionAttributeHandlers);
+      }
+      else {
+         prepareResponse(response);
+      }
+   }
+
+   return mav;
+}
+```
 
 HandlerMapping的初始化过程主要分成两部分，通过initInterceptors()方法将SimpleUrlHandlerMapping中定义的interceptors包装成HandlerInterceptor对象保存在adaptedInterceptors数组中，同时通过registerHandlers()方法将SimpleHandlerMapping中定义的mappings（即URL与Handler的映射）注册到handlerMap集合中。
 
@@ -820,8 +1008,6 @@ META-INF/services/javax.servlet.ServletContainerInitializer文件，文件内容
 ```java
 org.springframework.web.SpringServletContainerInitializer
 ```
-
-
 
 ```java
 @HandlesTypes(WebApplicationInitializer.class)
@@ -990,19 +1176,61 @@ org.apache.catalina.core.StandardContext#startInternal
 
 
 
-## 四大组件
+## 组件（可扩展）
 
-HandlerMapping
+### HandlerMapping handler映射器
+
+输入url，输出handler处理器
+
+```xml
+<!--配置处理器映射器
+    springmvc框架根据HandlerMapping接口判断是否是处理器映射器-->
+    <!--根据bean的name进行查找Handler,将action的url配置在bean的name中-->
+    <bean
+        class="org.springframework.web.servlet.handler.BeanNameUrlHandlerMapping"/>
+```
 
 下面的图已经过时
 
 ![image-20191217144119968](https://github.com/garydai/garydai.github.com/raw/master/_posts/pic/image-20191217144119968.png)
 
-HandlerAdapter
+### HandlerAdapter handler适配器
 
-HandlerException
+处理器映射器将查找到的Handler返回给DispatcherServlet后，DispatcherServlet会调用适配器执行Handler，通过适配器去扩展对不同Handler的执行
 
-ResolverViewResolver
+```xml
+<!--配置处理器适配器
+    springmvc框架根据HandlerAdapter接口判断是否是处理器适配器-->
+    <bean class="org.springframework.web.servlet.mvc.SimpleControllerHandlerAdapter"/>
+```
+
+处理器适配器要实现以下接口
+
+```java
+public interface HandlerAdapter {
+
+   boolean supports(Object handler);
+
+   @Nullable
+   ModelAndView handle(HttpServletRequest request, HttpServletResponse response, Object handler) throws Exception;
+
+   long getLastModified(HttpServletRequest request, Object handler);
+
+}
+```
+
+### HandlerException
+
+### ResolverViewResolver 视图解析器
+
+Handler执行完成后给处理器适配器返回一个ModelAndView对象，它是Spring MVC的一个对象，用于对Model和View进行封装。然后处理器适配器又将这个对象返回给DispatcherServlet,DispatcherServlet调用视图解析器进行视图解析，所以这里我们要配置视图解析器
+
+```xml
+<!--配置视图解析器
+    要求将jstl的包加到classpath-->
+    <bean class="org.springframework.web.servlet.view.InternalResourceViewResolver">
+    </bean>
+```
 
 ## 处理请求
 
@@ -1247,7 +1475,7 @@ public void invokeAndHandle(ServletWebRequest webRequest, ModelAndViewContainer 
 		mavContainer.setRequestHandled(false);
 		Assert.state(this.returnValueHandlers != null, "No return value handlers");
 		try {
-      // 选择结果处理器，处理结果
+      // 选择结果处理器，处理结果，有@ResponseBody，使用RequestResponseBodyMethodProcessor
 			this.returnValueHandlers.handleReturnValue(
 					returnValue, getReturnValueType(returnValue), mavContainer, webRequest);
 		}
@@ -1829,20 +2057,20 @@ protected void renderMergedOutputModel(
 
 
 
-### 主要流程
+## 主要流程
 
 1. 首先方法进入，doDispatch
 2. checkMultipart，判断当前请求是否有文件
 3. getHandler，通过HandleMapping去找一个Controller对象 
    1. **扩展点1**：HandleMapping
-   2.  Spring boot 扩展Spring mvc，其中就扩展了 HandleMapping 去解析静态资源
-4. getHandlerAdapter， 根据你controller的类型去找一个适配器
+   2.  Spring boot扩展Spring mvc，其中就扩展了 HandleMapping 去解析静态资源
+4. getHandlerAdapter，根据你controller的类型去找一个适配器
    1. 因为Controller有很多种不同的注册方式，所以需要不同的适配器
    2. **扩展点2**：HandlerAdapter
-5. handle : 执行Controller逻辑并且进行视图裁决（判断是要重定向还是转发还是响应页面）
+5. handle：执行Controller逻辑并且进行视图裁决（判断是要重定向还是转发还是响应页面）
    1. invokeForRequest() 执行方法的全部逻辑
-   2. 首先给参数赋值  
-      1. 参数赋值的**扩展点3**：HandlerMethodArgumentResolver 
+   2. 首先给参数赋值
+      1. 参数赋值的**扩展点3**：HandlerMethodArgumentResolver
    3. 调用invoke指定方法
 6. setResponseStatus设置ResponseStatus响应状态码 对标：@ResponseStatus注解
 7. handleReturnValue 进行视图裁决
@@ -1901,3 +2129,5 @@ http://www.it165.net/pro/html/201502/33644.html
 https://blog.csdn.net/and1kaney/article/details/51214193
 
 https://cloud.tencent.com/developer/article/1497830
+
+https://www.jianshu.com/p/5604c7465851
