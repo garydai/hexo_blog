@@ -452,13 +452,13 @@ public class Client {
 ​		        return state;
 ​		    }
 ​		
-		    public void change(String newState){
-		        state = newState;
-		        System.out.println("主题状态为：" + state);
-		        //状态发生改变，通知各个观察者
-		        this.nodifyObservers(state);
-		    }
-		}
+​		    public void change(String newState){
+​		        state = newState;
+​		        System.out.println("主题状态为：" + state);
+​		        //状态发生改变，通知各个观察者
+​		        this.nodifyObservers(state);
+​		    }
+​		}
 
 
 		public interface Observer {
@@ -497,6 +497,27 @@ public class Client {
 ## 17.责任链模式
 
 每个对象持有对下一个对象的引用
+
+方法之一：先把filter放在一条链表上，然后遍历链表，
+
+```
+a = invoker
+for f: filter:
+
+	b = new invoker{
+
+			f.invoker(a)
+
+	}
+	a = b
+```
+
+方法之二：
+
+```	
+aprocessor.next = bprocessor
+bprocessor.next = c.processor
+```
 
 ## 18.命令模式
 

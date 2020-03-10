@@ -968,6 +968,8 @@ public boolean containsQuorum(Set<Long> set){
 
 接受其他服务器的投票，和自己的投票结果做比较，选择最强大的投票结果，并更新自己的投票，最后统计和自己的投票结果一样的票数是否超过一半，超过则选出了leader，没有则继续
 
+![image-20200310084906400](/Users/daitechang/Documents/hexo_blog/source/_posts/pic/image-20200310084906400.png)
+
 ### IO模型
 
 AcceptThread
@@ -2608,6 +2610,86 @@ void followLeader() throws InterruptedException {
 }
 ```
 
+## 持久化
+
+syncRequestProcessor
+
+```java
+public void run() {
+    try {
+        int logCount = 0;
+
+        // we do this in an attempt to ensure that not all of the servers
+        // in the ensemble take a snapshot at the same time
+        setRandRoll(r.nextInt(snapCount/2));
+        while (true) {
+            Request si = null;
+            if (toFlush.isEmpty()) {
+                si = queuedRequests.take();
+            } else {
+                si = queuedRequests.poll();
+                if (si == null) {
+                    flush(toFlush);
+                    continue;
+                }
+            }
+            if (si == requestOfDeath) {
+                break;
+            }
+            if (si != null) {
+                // track the number of records written to the log
+                if (zks.getZKDatabase().append(si)) {
+                    logCount++;
+                    if (logCount > (snapCount / 2 + randRoll)) {
+                        setRandRoll(r.nextInt(snapCount/2));
+                        // roll the log
+                        zks.getZKDatabase().rollLog();
+                        // take a snapshot
+                        if (snapInProcess != null && snapInProcess.isAlive()) {
+                            LOG.warn("Too busy to snap, skipping");
+                        } else {
+                          	// 开启快照线程，将整个内存数据保存在文件
+                            snapInProcess = new ZooKeeperThread("Snapshot Thread") {
+                                    public void run() {
+                                        try {
+                                            zks.takeSnapshot();
+                                        } catch(Exception e) {
+                                            LOG.warn("Unexpected exception", e);
+                                        }
+                                    }
+                                };
+                            snapInProcess.start();
+                        }
+                        logCount = 0;
+                    }
+                } else if (toFlush.isEmpty()) {
+                    // optimization for read heavy workloads
+                    // iff this is a read, and there are no pending
+                    // flushes (writes), then just pass this to the next
+                    // processor
+                    if (nextProcessor != null) {
+                        nextProcessor.processRequest(si);
+                        if (nextProcessor instanceof Flushable) {
+                            ((Flushable)nextProcessor).flush();
+                        }
+                    }
+                    continue;
+                }
+                toFlush.add(si);
+                if (toFlush.size() > 1000) {
+                  	// 1000个事务，一个文件
+                    flush(toFlush);
+                }
+            }
+        }
+    } catch (Throwable t) {
+        handleException(this.getName(), t);
+        running = false;
+    }
+    LOG.info("SyncRequestProcessor exited!");
+}
+```
+
 ## server工作状态
 
 LOOKING：当前Server不知道leader是谁，正在搜寻
@@ -2630,3 +2712,4 @@ Follower的消息循环处理如下几种来自Leader的消息：
  ```
 
 ## redis异同点
+

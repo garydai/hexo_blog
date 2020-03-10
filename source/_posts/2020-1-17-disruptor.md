@@ -8,7 +8,14 @@ title: Disruptor
 
 # Disruptor
 
-高性能队列，Disruptor不用锁，使用cas
+1. JUC中的有界队列ArrayBlockingQueue和LinkedBlockingQueue，都是基于**ReentrantLock**
+2. 在高并发场景下，锁的效率并不高，Disruptor是一款**性能更高**的有界内存队列
+3. Disruptor高性能的原因
+   - 内存分配更合理，使用RingBuffer，数组元素在初始化时一次性全部创建
+     - **提升缓存命中率**，对象循环利用，**避免频繁GC**
+   - 能够**避免伪共享**，提升缓存利用率
+   - 采用**无锁算法**，避免频繁加锁、解锁的性能消耗
+   - 支持**批量消费**，消费者可以以无锁的方式消费多个消息
 
 ## 缓存行填充
 
@@ -421,3 +428,5 @@ http://ifeve.com/disruptor-cacheline-padding/
 http://ifeve.com/dissecting-disruptor-whats-so-special/
 
 https://tech.meituan.com/2016/11/18/disruptor.html
+
+http://zhongmingmao.me/2019/05/31/java-concurrent-disruptor/
